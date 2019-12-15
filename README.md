@@ -1,5 +1,5 @@
 # burpsuite_jsapi
-[中文版本(Chinese version)](README.zh-CNmd)
+[中文版本(Chinese version)](README_zh-CN.md)
 
 A BurpSuite extension written by Python,used to find API interface in JS file.
 
