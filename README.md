@@ -1,22 +1,23 @@
 # burpsuite_jsapi
+[中文版本(Chinese version)](README.zh-CNmd)
+
 A BurpSuite extension written by Python,used to find API interface in JS file.
-一个用Python写的用于查找 JS 文件中的 API 接口的 BurpSuite 插件。
 
-### 0x00 使用前提
+### 0x00 Premise
 
-需安装好 BurpSuite 的 **JPython** 环境，可参考 https://www.freebuf.com/news/193657.html 。
+**JPython** environment should be installed in BurpSuite,consult https://www.freebuf.com/news/193657.html .
 
-### 0x01 使用步骤
+### 0x01 Step
 
 1. ```bash
    git clone https://github.com/0x-zmz/burpsuite_jsapi
    ```
 
-2. 在 Extender > Extensions 中添加 `burpsuite_jsapi.py` 插件。
+2. Add `burpsuite_jsapi.py` plug-in in **Extender** > **Extensions** .
    ![install](/install.png)
 
-### 0x02 使用结果
+### 0x02 Result
 
-在测试中，可直接点击 JsApi 选项卡获取结果，示例如下图所示：
+In the pentest, you can directly click the JsApi tab to obtain the results, as shown in the following figure:
 
 ![example](/example.png)
