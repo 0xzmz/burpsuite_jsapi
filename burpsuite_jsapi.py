@@ -90,7 +90,7 @@ class JsApiTab(IMessageEditorTab):
         for header in r.getHeaders():
             if header.lower().startswith("content-type:"):
                 content_type = header.split(":")[1].lower()
-                if content_type.find("text/javascript") > 0 and matches:
+                if content_type.find("/javascript") > 0 and matches:
                     return True
                 else:
                     return False
