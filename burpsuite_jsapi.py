@@ -116,6 +116,9 @@ class JsApiTab(IMessageEditorTab):
                     api = match.group(groupNum)
                     if api.replace("/", ""):
                         api_list.append(api)
+            # 去重
+            # Remove duplication
+            api_list = list(set(api_list))            
             pretty_msg = ",\n".join(api_list)
 
             self._txtInput.setText(pretty_msg)
