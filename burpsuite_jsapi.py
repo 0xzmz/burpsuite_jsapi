@@ -1,6 +1,6 @@
 # coding=utf-8
 # Burp Extension - JsApi
-# Copyright : 0x_zmz <github.com/0x-zmz>
+# Copyright : 0xzmz <github.com/0xzmz>
 
 import json
 import re
@@ -24,7 +24,7 @@ menuItems = {
 # Global Switch
 _forceJsApi = False
 
-print("Burp Extension - JsApi\nUsed to find API interface in JS file.\nBy 0x_zmz <github.com/0x-zmz>")
+print("Burp Extension - JsApi\nUsed to find API interface in JS file.\nBy 0x_zmz <github.com/0xzmz>")
 
 class BurpExtender(IBurpExtender, IMessageEditorTabFactory, IContextMenuFactory):
     def registerExtenderCallbacks(self, callbacks):

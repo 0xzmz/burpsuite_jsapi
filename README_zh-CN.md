@@ -9,7 +9,7 @@
 ### 0x01 使用步骤
 
 1. ```bash
-   git clone https://github.com/0x-zmz/burpsuite_jsapi
+   git clone https://github.com/0xzmz/burpsuite_jsapi
    ```
 
 2. 在 **Extender** > **Extensions** 中添加 `burpsuite_jsapi.py` 插件。

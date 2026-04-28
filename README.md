@@ -10,7 +10,7 @@ A BurpSuite extension written by Python,used to find API interface in JS file.
 ### 0x01 Step
 
 1. ```bash
-   git clone https://github.com/0x-zmz/burpsuite_jsapi
+   git clone https://github.com/0xzmz/burpsuite_jsapi
    ```
 
 2. Add `burpsuite_jsapi.py` plug-in in **Extender** > **Extensions** .
