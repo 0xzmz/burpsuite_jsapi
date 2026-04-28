@@ -1,151 +1,156 @@
 # coding=utf-8
-# Burp Extension - JsApi
-# Copyright : 0xzmz <github.com/0xzmz>
+"""Burp Suite extension for extracting API endpoints from JavaScript files.
 
-import json
+The extension is intentionally compatible with Jython 2.7, which is still the
+runtime used by Burp Suite's legacy Python extender support.
+"""
+
 import re
 
 from burp import IBurpExtender
-from burp import IMessageEditorTabFactory
-from burp import IMessageEditorTab
-from burp import IParameter
 from burp import IContextMenuFactory
+from burp import IMessageEditorTab
+from burp import IMessageEditorTabFactory
 
-# Java imports
+from java.util import ArrayList
 from javax.swing import JMenuItem
-from java.util import List, ArrayList
 
-# Menu items
-menuItems = {
+
+EXTENSION_NAME = "JsApi"
+MENU_LABELS = {
     False: "Turn JsApi active detection on",
-    True: "Turn JsApi active detection off"
+    True: "Turn JsApi active detection off",
 }
 
-# Global Switch
-_forceJsApi = False
+JAVASCRIPT_CONTENT_TYPES = (
+    "application/javascript",
+    "application/ecmascript",
+    "application/x-javascript",
+    "text/javascript",
+    "text/ecmascript",
+)
 
-print("Burp Extension - JsApi\nUsed to find API interface in JS file.\nBy 0x_zmz <github.com/0xzmz>")
+API_PATTERN = re.compile(
+    r"""["']((?:https?:)?//[^"'\\\s<>]+|/[A-Za-z0-9._~%-][^"'\\\s<>]*)["']""",
+    re.MULTILINE,
+)
+
+_force_jsapi = False
+
 
 class BurpExtender(IBurpExtender, IMessageEditorTabFactory, IContextMenuFactory):
+    """Register the JsApi message editor tab and context menu switch."""
+
     def registerExtenderCallbacks(self, callbacks):
         self._callbacks = callbacks
         self._helpers = callbacks.getHelpers()
 
-        callbacks.setExtensionName('JsApi')
+        callbacks.setExtensionName(EXTENSION_NAME)
         callbacks.registerMessageEditorTabFactory(self)
         callbacks.registerContextMenuFactory(self)
-
-        return
+        callbacks.printOutput(
+            "Burp Extension - {0}\n"
+            "Used to find API endpoints in JavaScript files.\n"
+            "By 0x_zmz <github.com/0xzmz>".format(EXTENSION_NAME)
+        )
 
     def createNewInstance(self, controller, editable):
-        return JsApiTab(self, controller, editable)
+        return JsApiTab(self, controller)
 
-    def createMenuItems(self, IContextMenuInvocation):
-        global _forceJsApi
-        menuItemList = ArrayList()
-        menuItemList.add(JMenuItem(menuItems[_forceJsApi], actionPerformed=self.onClick))
-
-        return menuItemList
+    def createMenuItems(self, invocation):
+        menu_item_list = ArrayList()
+        menu_item_list.add(
+            JMenuItem(MENU_LABELS[_force_jsapi], actionPerformed=self.onClick)
+        )
+        return menu_item_list
 
     def onClick(self, event):
-        global _forceJsApi
-        _forceJsApi = not _forceJsApi
+        global _force_jsapi
+        _force_jsapi = not _force_jsapi
+        state = "enabled" if _force_jsapi else "disabled"
+        self._callbacks.printOutput("JsApi active detection {0}.".format(state))
 
 
 class JsApiTab(IMessageEditorTab):
-    def __init__(self, extender, controller, editable):
-        self._extender = extender
+    """Read-only editor tab that lists endpoints found in a message body."""
+
+    def __init__(self, extender, controller):
         self._helpers = extender._helpers
-        self._editable = editable
+        self._current_message = None
 
-        self._txtInput = extender._callbacks.createTextEditor()
-        self._txtInput.setEditable(editable)
-
-        self._jsonMagicMark = ['{"', '["', '[{']
-        self.api_regex = r"[\"|\'](\/[a-zA-Z0-9|\/]+)[\"|\']"
-        return
+        self._txt_input = extender._callbacks.createTextEditor()
+        self._txt_input.setEditable(False)
 
     def getTabCaption(self):
-        return "JsApi"
+        return EXTENSION_NAME
 
     def getUiComponent(self):
-        return self._txtInput.getComponent()
+        return self._txt_input.getComponent()
 
     def isEnabled(self, content, isRequest):
-        global _forceJsApi
+        if content is None:
+            return False
 
-        if isRequest:
-            r = self._helpers.analyzeRequest(content)
-        else:
-            r = self._helpers.analyzeResponse(content)
+        message_info = self._analyze_message(content, isRequest)
+        body = self._get_body(content, message_info)
+        endpoints = self._extract_endpoints(body)
 
-        msg = content[r.getBodyOffset():].tostring()
-        matches = re.findall(self.api_regex, msg, re.MULTILINE)
+        if not endpoints:
+            return False
 
-        #
-        # if matches:
-        #     return True
-
-        # 下面这个判断是限制必须是js文件并且匹配到才显示，如果不想只限定js文件，取消注释上面2句话即可
-        for header in r.getHeaders():
-            if header.lower().startswith("content-type:"):
-                content_type = header.split(":")[1].lower()
-                if content_type.find("/javascript") > 0 and matches:
-                    return True
-                else:
-                    return False
-        return False
+        return _force_jsapi or self._is_javascript_message(message_info)
 
     def setMessage(self, content, isRequest):
+        self._current_message = content
+
         if content is None:
-            self._txtInput.setText(None)
-            self._txtInput.setEditable(False)
-        else:
-            if isRequest:
-                r = self._helpers.analyzeRequest(content)
-            else:
-                r = self._helpers.analyzeResponse(content)
+            self._txt_input.setText(None)
+            return
 
-            msg = content[r.getBodyOffset():].tostring()
-            api_list = []
-            matches = re.finditer(self.api_regex, msg, re.MULTILINE)
-            for matchNum, match in enumerate(matches, start=1):
-                for groupNum in range(0, len(match.groups())):
-                    groupNum = groupNum + 1
-                    # print(match.group(groupNum))
-                    api = match.group(groupNum)
-                    if api.replace("/", ""):
-                        api_list.append(api)
-            # 去重
-            # Remove duplication
-            api_list = list(set(api_list))            
-            pretty_msg = ",\n".join(api_list)
-
-            self._txtInput.setText(pretty_msg)
-            self._txtInput.setEditable(self._editable)
-
-        self._currentMessage = content
-        return
+        message_info = self._analyze_message(content, isRequest)
+        body = self._get_body(content, message_info)
+        endpoints = self._extract_endpoints(body)
+        self._txt_input.setText("\n".join(endpoints))
+        self._txt_input.setEditable(False)
 
     def getMessage(self):
-        if self._txtInput.isTextModified():
-            try:
-                pre_data = self._txtInput.getText()
-                garbage = pre_data[:pre_data.find("{")]
-                clean = pre_data[pre_data.find("{"):]
-                data = garbage + json.dumps(json.loads(clean))
-            except:
-                data = self._helpers.bytesToString(self._txtInput.getText())
-
-            # Reconstruct request/response
-            r = self._helpers.analyzeRequest(self._currentMessage)
-
-            return self._helpers.buildHttpMessage(r.getHeaders(), self._helpers.stringToBytes(data))
-        else:
-            return self._currentMessage
+        return self._current_message
 
     def isModified(self):
-        return self._txtInput.isTextModified()
+        return False
 
     def getSelectedData(self):
-        return self._txtInput.getSelectedText()
+        return self._txt_input.getSelectedText()
+
+    def _analyze_message(self, content, is_request):
+        if is_request:
+            return self._helpers.analyzeRequest(content)
+        return self._helpers.analyzeResponse(content)
+
+    def _get_body(self, content, message_info):
+        body_offset = message_info.getBodyOffset()
+        return self._helpers.bytesToString(content[body_offset:])
+
+    def _extract_endpoints(self, body):
+        endpoints = []
+        seen = set()
+
+        for match in API_PATTERN.finditer(body):
+            endpoint = match.group(1).strip()
+            if endpoint and endpoint not in seen:
+                seen.add(endpoint)
+                endpoints.append(endpoint)
+
+        return endpoints
+
+    def _is_javascript_message(self, message_info):
+        for header in message_info.getHeaders():
+            if not header.lower().startswith("content-type:"):
+                continue
+
+            content_type = (
+                header.split(":", 1)[1].split(";", 1)[0].strip().lower()
+            )
+            return content_type in JAVASCRIPT_CONTENT_TYPES
+
+        return False
