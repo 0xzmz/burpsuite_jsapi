@@ -90,10 +90,7 @@ class JsApiTab(IMessageEditorTab):
         for header in r.getHeaders():
             if header.lower().startswith("content-type:"):
                 content_type = header.split(":")[1].lower()
-                if content_type.find("/javascript") > 0 and matches:
-                    return True
-                else:
-                    return False
+                return bool(content_type.find("/javascript") > 0 and matches)
         return False
 
     def setMessage(self, content, isRequest):
@@ -110,7 +107,7 @@ class JsApiTab(IMessageEditorTab):
             api_list = []
             matches = re.finditer(self.api_regex, msg, re.MULTILINE)
             for matchNum, match in enumerate(matches, start=1):
-                for groupNum in range(0, len(match.groups())):
+                for groupNum in range(len(match.groups())):
                     groupNum = groupNum + 1
                     # print(match.group(groupNum))
                     api = match.group(groupNum)
@@ -118,7 +115,7 @@ class JsApiTab(IMessageEditorTab):
                         api_list.append(api)
             # 去重
             # Remove duplication
-            api_list = list(set(api_list))            
+            api_list = list(set(api_list))
             pretty_msg = ",\n".join(api_list)
 
             self._txtInput.setText(pretty_msg)
@@ -128,21 +125,20 @@ class JsApiTab(IMessageEditorTab):
         return
 
     def getMessage(self):
-        if self._txtInput.isTextModified():
-            try:
-                pre_data = self._txtInput.getText()
-                garbage = pre_data[:pre_data.find("{")]
-                clean = pre_data[pre_data.find("{"):]
-                data = garbage + json.dumps(json.loads(clean))
-            except:
-                data = self._helpers.bytesToString(self._txtInput.getText())
-
-            # Reconstruct request/response
-            r = self._helpers.analyzeRequest(self._currentMessage)
-
-            return self._helpers.buildHttpMessage(r.getHeaders(), self._helpers.stringToBytes(data))
-        else:
+        if not self._txtInput.isTextModified():
             return self._currentMessage
+        try:
+            pre_data = self._txtInput.getText()
+            garbage = pre_data[:pre_data.find("{")]
+            clean = pre_data[pre_data.find("{"):]
+            data = garbage + json.dumps(json.loads(clean))
+        except:
+            data = self._helpers.bytesToString(self._txtInput.getText())
+
+        # Reconstruct request/response
+        r = self._helpers.analyzeRequest(self._currentMessage)
+
+        return self._helpers.buildHttpMessage(r.getHeaders(), self._helpers.stringToBytes(data))
 
     def isModified(self):
         return self._txtInput.isTextModified()
